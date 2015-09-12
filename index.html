@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Game Engine</title>
+<style type="text/css">
+   #myCanvas{
+   		border:1px solid #d3d3d3; 
+   		background-color:#000;
+   }
+   body{
+   		text-align:center; 
+   		margin:auto;
+   }
+</style>
+</script>
+</head>
+<body>
+    <canvas id="myCanvas" width="960" height="640">Your browser does not support the HTML5 canvas tag.</canvas>
+
+<script src="scripts/Blob.js"></script>
+<script src="scripts/cplayer.js"></script>
+<script src="scripts/levelData.js"></script>
+<script src="scripts/musicData.js"></script>
+
+
+<script>
+var currentLevel = 0;
+var TILE = 32;
+var SPEED = 4;
+var MAPDATA = { tw: 40, th: 20 }
+var c = document.getElementById("myCanvas");
+var ctx = c.getContext("2d");
+var playerX;
+var playerY;
+var right;
+var left;
+var reverse;
+var PI = Math.PI;
+var pause = false;
+var enemies;
+var items;
+var map;
+var isStart = false;
+var lives = 3;
+var killed = false;
+var goToNextLevel = false;
+var cnvAssets = document.createElement('canvas');
+cnvAssets.width = TILE * 11;
+cnvAssets.height = TILE;
+var ctxAssets = cnvAssets.getContext('2d');
+var audio = document.createElement("audio");
+var audioKill = document.createElement("audio");
+
+function startScreen(){
+
+	ctx.font = "64px sans-serif";
+	ctx.fillStyle = "gold";
+	ctx.textAlign = "center";	
+	ctx.fillText("Reverse G Block", 480, 100); 
+
+	ctx.font = "32px sans-serif";
+	ctx.fillStyle = "red";
+	ctx.textAlign = "center";	
+	ctx.fillText("Generating Assets, please wait...", 480, 320); 
+	
+	setTimeout(buildAssets, 1000);	
+}
+
+function showInstructions(){
+
+    ctx.clearRect(0, 0, c.width, c.height);
+	ctx.font = "64px sans-serif";
+	ctx.fillStyle = "gold";
+	ctx.textAlign = "center";	
+	ctx.fillText("Reverse G Block", 480, 100);
+	ctx.font = "22px sans-serif";
+	ctx.fillStyle = "white";
+	ctx.textAlign = "left";	
+	ctx.fillText("Controls", 100, 300);
+	ctx.fillText("A: Move Left", 100, 340);
+	ctx.fillText("D: Move Right", 100, 380);
+	ctx.fillText("S: Reverse Gravity", 100, 420);
+	ctx.fillText("M: Toggle Music", 100, 460);
+	ctx.fillText("Avoid", 400, 300);
+	drawRect(400,332,TILE,8);
+	ctx.fillText("Spikes", 448, 348);
+	drawRect(400,394,TILE,9);
+	ctx.fillText("Lava", 448, 410);
+	ctx.drawImage(cnvAssets, TILE * 8, 0,TILE,TILE,550,332,TILE,TILE);
+	ctx.fillText("Angry Block", 598, 348);
+	ctx.drawImage(cnvAssets, TILE * 9, 0,TILE,TILE,550,394,TILE,TILE);
+	drawRect(550,394,TILE,5)
+	ctx.fillText("Fish Block", 598, 410);
+
+	ctx.textAlign = "center";	
+	ctx.fillText("Collect all the coins and then get to the exit", 480, 200);
+	ctx.font = "32px sans-serif";
+	ctx.fillStyle = "red";
+	ctx.fillText("PRESS ANY KEY TO PLAY", 480, 550);
+	lives = 3
+	isStart = true;
+}
+
+function buildAssets(){
+
+	ctxAssets.fillStyle = "grey";
+	ctxAssets.fillRect(0, 0, TILE, TILE);
+	ctxAssets.strokeStyle = "#2F4F4F";
+	ctxAssets.lineWidth   = 2;
+	ctxAssets.strokeRect(0,0, TILE,TILE);
+	ctxAssets.stroke();
+
+	ctxAssets.fillStyle = "pink";
+	ctxAssets.fillRect(TILE, 0, TILE, TILE);
+	ctxAssets.stroke();
+
+	ctxAssets.fillStyle="black";
+	ctxAssets.strokeStyle="black";
+	ctxAssets.beginPath();
+	ctxAssets.moveTo((TILE) + 2, 16);
+	ctxAssets.lineTo((TILE) + 16,30);
+	ctxAssets.lineTo((TILE) + 30,16);
+	ctxAssets.stroke();
+	ctxAssets.beginPath();
+	ctxAssets.arc((TILE) + 8, 8, 5, 0, 2 * Math.PI);
+	ctxAssets.closePath();
+	ctxAssets.fill();
+	ctxAssets.beginPath();
+	ctxAssets.arc((TILE) + 24, 8, 4, 0, 2 * Math.PI);
+	ctxAssets.closePath();
+	ctxAssets.fill();
+
+	ctxAssets.fillStyle = "brown";
+	ctxAssets.fillRect(TILE * 2, 0, TILE, TILE);
+	ctxAssets.fillStyle = "green";
+	ctxAssets.fillRect(TILE * 2, 0, TILE, TILE / 4);
+	ctxAssets.stroke();
+
+	ctxAssets.globalAlpha=0.5;
+	ctxAssets.fillStyle = "#00CED1";
+	ctxAssets.fillRect(TILE * 3, 0, TILE, TILE);
+	ctxAssets.globalAlpha=1;
+	ctxAssets.stroke();
+
+	ctxAssets.fillStyle = "orange";
+	ctxAssets.fillRect(TILE * 4, 0, TILE, TILE);
+	ctxAssets.stroke();
+
+	var gap = TILE / 4;
+
+	ctxAssets.beginPath();
+	ctxAssets.moveTo((TILE * 5) + 1,0);
+	ctxAssets.lineTo((TILE * 5) + gap,TILE);
+	ctxAssets.lineTo((TILE * 5) + gap * 2, 5);
+	ctxAssets.lineTo((TILE * 5) + gap * 3 , TILE);
+	ctxAssets.lineTo((TILE * 5) + gap * 4 - 1 , 0);
+	ctxAssets.lineTo(TILE * 5,0);
+	ctxAssets.stroke();
+	ctxAssets.closePath();
+	ctxAssets.fillStyle="silver";
+	ctxAssets.fill();
+
+	ctxAssets.fillStyle = "yellow";
+	ctxAssets.beginPath();
+	ctxAssets.arc((TILE * 6) + (TILE / 2), TILE / 2, (TILE / 2) - 3, 0, 2 * Math.PI);
+	ctxAssets.closePath();
+	ctxAssets.fill();
+
+	ctxAssets.font = "10px sans-serif";
+	ctxAssets.fillStyle = "white";
+	ctxAssets.textAlign = "left";	
+	ctxAssets.fillText("EXIT", (TILE * 7) + 5, 10); 
+
+	ctxAssets.fillStyle = "red";
+	ctxAssets.fillRect(TILE * 8, 0, TILE, TILE);
+	ctxAssets.stroke();
+	ctxAssets.fillStyle="black";
+	ctxAssets.strokeStyle="black";
+	ctxAssets.beginPath();
+	ctxAssets.moveTo((TILE * 8) + 2, 30);
+	ctxAssets.lineTo((TILE * 8) + 16,16);
+	ctxAssets.lineTo((TILE * 8) + 30,30);
+	ctxAssets.stroke();
+	//ctxAssets.closePath();
+
+	//ctxAssets.fill();
+	ctxAssets.beginPath();
+	ctxAssets.arc((TILE * 8) + 8, 8, 5, 0, 2 * Math.PI);
+	ctxAssets.closePath();
+	ctxAssets.fill();
+
+	ctxAssets.beginPath();
+	ctxAssets.arc((TILE * 8) + 24, 8, 5, 0, 2 * Math.PI);
+	ctxAssets.closePath();
+	ctxAssets.fill();
+
+	ctxAssets.fillStyle = "orange";
+	ctxAssets.fillRect(TILE * 9, 0, TILE, TILE);
+	ctxAssets.fillStyle="black";
+	ctxAssets.strokeStyle="black";
+	ctxAssets.beginPath();
+	ctxAssets.moveTo((TILE * 9) + 2, 16);
+	ctxAssets.lineTo((TILE * 9) + 16,30);
+	ctxAssets.lineTo((TILE * 9) + 30,16);	
+	ctxAssets.stroke();
+	ctxAssets.fill();
+	ctxAssets.closePath();
+	ctxAssets.beginPath();
+	ctxAssets.arc((TILE * 9) + 8, 8, 5, 0, 2 * Math.PI);
+	ctxAssets.closePath();
+	ctxAssets.fill();
+	ctxAssets.beginPath();
+	ctxAssets.arc((TILE * 9) + 24, 8, 4, 0, 2 * Math.PI);
+	ctxAssets.closePath();
+	ctxAssets.fill();
+
+
+	ctxAssets.fillStyle = "pink";
+	ctxAssets.fillRect(TILE * 10, 0, TILE, TILE);
+	ctxAssets.stroke();
+
+	ctxAssets.fillStyle="black";
+	ctxAssets.strokeStyle="black";
+	ctxAssets.beginPath();
+	ctxAssets.moveTo((TILE * 10) + 2, 16);
+	ctxAssets.lineTo((TILE * 10) + 16,2);
+	ctxAssets.lineTo((TILE * 10) + 30,16);
+	ctxAssets.stroke();	
+	ctxAssets.beginPath();
+	ctxAssets.arc((TILE * 10) + 8, 24, 5, 0, 2 * Math.PI);
+	ctxAssets.closePath();
+	ctxAssets.fill();
+	ctxAssets.beginPath();
+	ctxAssets.arc((TILE * 10) + 24, 24, 4, 0, 2 * Math.PI);
+	ctxAssets.closePath();
+	ctxAssets.fill();
+
+
+	// Generate music...
+	var player = new CPlayer();
+    player.init(song);
+
+	var done = false;
+	while(done == false){
+	  	done = player.generate() >= 1;
+	}       
+
+	var wave = player.createWave();
+	audio.src = URL.createObjectURL(new Blob([wave], {type: "audio/wav"}));
+	audio.addEventListener('ended', function() {
+	    this.currentTime = 0;
+	    this.play();
+	}, false);
+
+
+	var player1 = new CPlayer();
+    player1.init(songKill);
+
+	done = false;
+	while(done == false){
+	  	done = player1.generate() >= 1;
+	}       
+
+	var wave1 = player1.createWave();
+	audioKill.src = URL.createObjectURL(new Blob([wave1], {type: "audio/wav"}));	
+	
+	showInstructions();
+}
+
+function init(level){
+
+	map = mapArray[level];
+	MAPDATA = { tw: map[0].length, th: map.length };
+	playerX = startPosArray[level][0];
+	playerY = startPosArray[level][1];
+	right = false;
+	left = false;
+	reverse = false;
+	pause = false;
+
+	enemies = enemyArray[level];
+	items = itemArray[level];
+	for(var g = 0; g < items.length; g++) {
+	   items[g][2] = false;   
+	}
+
+	requestAnimationFrame(kernal);
+
+	audio.currentTime = 0;
+	audio.play();
+}
+
+
+var t2p = function(t) { return t*TILE;             },
+    p2t = function(p) { return Math.floor(p/TILE); }
+
+function blockCollision(x,y){
+
+	if(map[y][x] == 1 || map[y][x] == 2){
+
+		return true;
+	}
+
+	return false;
+}
+
+function intersect(x,y) {
+    return !(playerX > x + TILE - 2 ||
+             playerX + TILE < x + 2 ||
+             playerY > y + TILE - 2 ||
+             playerY + TILE < y + 2);
+}
+
+function kernal(){
+
+	if(pause == true){return;}
+
+	if(right){
+
+		if(!blockCollision(p2t(playerX) + 1,p2t(playerY))
+			&& !blockCollision(p2t(playerX) + 1,p2t(playerY + 16))){
+
+			playerX += SPEED;
+		}		
+	}
+	if(left){
+		if(!blockCollision(p2t(playerX - SPEED),p2t(playerY)) 
+			&& !blockCollision(p2t(playerX - SPEED),p2t(playerY + 16))){
+		
+			playerX -= SPEED;
+		}
+	}
+
+	gravity();	
+
+	var noEnemy = enemies.length;
+
+	for(e = 0; e < noEnemy; e++){			
+
+		switch(enemies[e][5]){
+			case "R":
+				if(enemies[e][1] + SPEED + TILE > enemies[e][4]){
+					enemies[e][5] = "L";
+					break;
+				}
+				enemies[e][1] += SPEED;
+			break;
+
+			case "L":
+				if(enemies[e][1] - SPEED < enemies[e][3]){
+					enemies[e][5] = "R";
+					break;
+				}
+				enemies[e][1] -= SPEED;
+			break;
+		}
+	}
+
+	ctx.clearRect(0, 0, c.width, c.height);	
+	drawMap();
+	requestAnimationFrame(kernal);
+}
+
+function drawRect(x,y,size,type)
+{
+	switch(type){
+		case 0:		
+		ctx.drawImage(cnvAssets, TILE, 0,TILE,TILE,x,y,TILE,TILE);
+		break;
+		case 1:
+		ctx.drawImage(cnvAssets, 0, 0,TILE,TILE,x,y,TILE,TILE);
+		break;
+		case 2:
+		ctx.drawImage(cnvAssets, TILE * 2, 0,TILE,TILE,x,y,TILE,TILE);		
+		break;		
+		case 5:
+		ctx.drawImage(cnvAssets, TILE * 3, 0,TILE,TILE,x,y,TILE,TILE);
+		break;
+		case 9:
+		ctx.drawImage(cnvAssets, TILE * 4, 0,TILE,TILE,x,y,TILE,TILE);
+		break;
+		case 7:
+		ctx.drawImage(cnvAssets, TILE * 7, 0,TILE,TILE,x,y,TILE,TILE);
+		break;
+		case 8:
+		ctx.drawImage(cnvAssets, TILE * 5, 0,TILE,TILE,x,y,TILE,TILE);
+		break;
+		case 10:
+		ctx.drawImage(cnvAssets, TILE * 10, 0,TILE,TILE,x,y,TILE,TILE);
+		break;
+	}	
+	
+	ctx.stroke();
+}
+
+function drawEnemy(en)
+{
+	switch(en[0]){
+		case "angry":
+		ctx.drawImage(cnvAssets, TILE * 8, 0,TILE,TILE,en[1],en[2],TILE,TILE);
+		break;
+
+		case "fishy":		
+		ctx.drawImage(cnvAssets, TILE * 9, 0,TILE,TILE,en[1],en[2],TILE,TILE);
+		break;	
+	}	
+	
+	ctx.stroke();
+}
+
+function drawItems(item){
+
+	var centerX = t2p(item[0]);
+	var centerY = t2p(item[1]);
+
+	ctx.drawImage(cnvAssets, TILE * 6, 0,TILE,TILE,centerX,centerY,TILE,TILE);
+}
+
+function onKeyDown(evt) {
+    
+    if (evt.keyCode == 65) {
+
+        left = true;
+
+    }
+    else if (evt.keyCode == 68) {
+
+        right = true;
+
+    }
+    else if (evt.keyCode == 87) {
+
+        jump = true;
+    }   
+}
+
+function onKeyUp(evt) {
+
+	if(isStart == true){
+		init(0);
+		isStart = false;
+	}
+
+    if (evt.keyCode == 65) {
+
+        left = false;
+    }
+    else if (evt.keyCode == 68) {
+
+        right = false;
+    }
+    else if (evt.keyCode == 87) {
+
+        jump = false;
+    }
+    else if (evt.keyCode == 83) {
+
+            reverse = reverse == true ? false : true;
+        }
+}
+function gravity(){
+
+	switch(reverse){
+		case true:
+			
+			if(playerY - 16 < 0){
+				killed = true;
+			}
+			else if(!blockCollision(p2t(playerX),p2t(playerY - 16)) 
+				&& !blockCollision(p2t(playerX + 30),p2t(playerY - 16))){
+
+				playerY -= playerY <= 0 ? 0 : 16;
+			}
+		break;
+
+		case false:
+				
+			if(!blockCollision(p2t(playerX),p2t(playerY) + 1) 
+				&& !blockCollision(p2t(playerX + 30),p2t(playerY) + 1)){
+
+				playerY += playerY + 32 >= c.height ? 0 : 16;
+			}
+			
+		break;
+	}	
+}
+
+this.addEventListener("keydown", onKeyDown, false);
+this.addEventListener("keyup", onKeyUp, false);
+
+function playerKilled(){
+
+	pause = true;
+	killed = false;
+	lives--;
+	reverse = false;
+	audio.pause();
+	audioKill.currentTime = 0;
+	audioKill.play();
+
+	if(lives < 0){
+
+		ctx.font = "64px sans-serif";
+		ctx.fillStyle = "gold";
+		ctx.textAlign = "center";
+		var message = "GAME OVER!"
+		ctx.fillText(message, 480, 320);
+
+		setTimeout(function(){
+
+			currentLevel = 0;
+			audio.pause();
+			showInstructions();
+			},5000
+		);
+	}
+	else{
+
+		setTimeout(function(){
+
+			playerX = startPosArray[currentLevel][0];
+			playerY = startPosArray[currentLevel][1];
+			pause = false;
+			audio.currentTime = 0;
+			audio.play();
+			kernal();
+			},2000
+		);		
+	}
+}
+
+function nextLevel(){
+
+	pause = true;
+	goToNextLevel = false;
+	currentLevel++;
+
+	ctx.font = "64px sans-serif";
+	ctx.fillStyle = "gold";
+	ctx.textAlign = "center";
+	var message = currentLevel == numLevels ? "You have won the game!" : "Level Complete!"
+	ctx.fillText(message, 480, 320);
+
+	setTimeout(function(){
+
+			if(currentLevel == numLevels)
+			{									
+				currentLevel = 0;
+				audio.pause();
+				showInstructions();
+			}
+			else{
+				
+				init(currentLevel);
+			}	
+		},5000
+	);
+}
+
+function drawMap(){
+	
+	ctx.setTransform(1,0,0,1,0,0);//reset the transform matrix as it is cumulative
+    ctx.clearRect(0, 0, c.width, c.height);//clear the viewport AFTER the matrix is reset
+	//Clamp the camera position to the world bounds while centering the camera around the player                                           
+    var camX = clamp(-playerX + c.width/2, -t2p(MAPDATA.tw) + c.width, 0);    
+    var camY = clamp(-playerY + c.height/2, 0, t2p(MAPDATA.th) - c.height);
+    ctx.translate( camX, camY );
+
+    var noItems = items.length;
+	for(z = 0; z < noItems; z++){			
+		
+		if(items[z][2] == false){
+			drawItems(items[z]);
+			if(intersect(t2p(items[z][0]),t2p(items[z][1]))){
+				
+				items[z][2]	= true;
+			}
+		}
+	}
+
+	if(reverse){
+		drawRect(playerX,playerY,32,10);
+	}
+	else{
+		drawRect(playerX,playerY,32,0);
+	}	
+
+	var noEnemy = enemies.length;
+
+	for(e = 0; e < noEnemy; e++){	
+		
+		drawEnemy(enemies[e]);
+		if(intersect(enemies[e][1],enemies[e][2])){
+			killed = true;
+			
+		}
+	}	
+
+	var numY = map.length;
+
+	for(var i = 0; i < numY; i++){
+
+		var numX = map[i].length;
+
+		for(var n = 0; n < numX; n++){
+
+			if(map[i][n] != ""){
+				drawRect(n * 32 ,i * 32,32,map[i][n]);
+
+				if((map[i][n] == 9 || map[i][n] == 8) && intersect(t2p(n),t2p(i))){
+					killed = true;
+				}
+				else if(map[i][n] == 7 && intersect(t2p(n),t2p(i))){
+
+					var foundCoins = true;
+
+					for(var g = 0; g < items.length; g++) {
+					   if(items[g][2] === false) {
+					     foundCoins = false;
+					     break;
+					   }
+					}
+
+					if(foundCoins){
+						goToNextLevel = true;						
+					}									
+				}
+			}
+			
+		}
+	}
+
+	ctx.setTransform(1,0,0,1,0,0);//reset the transform matrix as it is cumulative
+	ctx.font = "40px sans-serif";
+	ctx.fillStyle = "white";
+	ctx.textAlign = "top left";	
+	ctx.fillText("Lives: " + lives, c.width - 150, 50);
+
+	if(killed){
+		playerKilled();
+	}
+
+	if(goToNextLevel){
+		nextLevel();
+	}
+}
+
+var clamp = function(num, min, max) {
+    return num < min ? min : (num > max ? max : num);
+};
+
+startScreen(); 
+
+</script> 
+</body>
+</html>
